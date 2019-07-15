@@ -18,7 +18,7 @@ fn main() {
         });
 
 
-    screen_buffer = render(screen_buffer, WIDTH as f32, HEIGHT as f32);
+    screen_buffer = render(screen_buffer, WIDTH as u32, HEIGHT as u32);
     while window.is_open() && !window.is_key_down(Key::Escape) {
         
        window.update_with_buffer(&screen_buffer).unwrap();
@@ -26,21 +26,20 @@ fn main() {
   println!("Hello, world!");
 }
 
-fn render(mut buffer: Vec<u32>, width: f32, height: f32) -> Vec<u32>{
+fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
     let mut pixel = 0;
-    let mut y = 0.0;
-    while y < height {
-        let mut x = 0.0;        
-        while x < width {
-            let r: u32 = (x / width * 256.0) as u32;
-            let g: u32 = (y / height * 256.0) as u32;
-            let b: u32 = 128;
-            buffer[pixel] = 255 << 24 | r << 16 | g << 8 | b;
-            x += 1.0;
+    for y in 0..height {
+        for x in 0..width {
+            let r: u32 = (x as f32 / width as f32 * 256.0) as u32;
+            let g: u32 = (y as f32 / height as f32 * 256.0) as u32;
+            let b: u32 = (pixel % 256) as u32;
+            buffer[pixel] = to_argb(r, g, b, 255);
             pixel += 1;
         }
-        y += 1.0;
     }
     buffer
 }
 
+fn to_argb(r: u32, g: u32, b: u32, a: u32) -> u32 {
+    a << 24 | r << 16 | g << 8 | b
+}
