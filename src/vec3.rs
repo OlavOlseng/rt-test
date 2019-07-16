@@ -12,7 +12,7 @@ impl Vec3 {
         Vec3 {x, y, z}
     }
 
-    pub fn zeroes() -> Vec3 {
+    pub fn origin() -> Vec3 {
         Vec3 { 
             x: 0.0, 
             y: 0.0, 
