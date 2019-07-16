@@ -56,9 +56,9 @@ fn dot(v1: &Vec3, v2: &Vec3) -> f32 {
 
 fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
     Vec3 {
-        x: v1.y * v2.z - v1.z*v2.y,
-        y: -v1.x * v2.z + v1.z*v2.x,
-        z: v1.x * v2.y - v1.y*v2.z
+        x: v1.y * v2.z - v1.z * v2.y,
+        y: -v1.x * v2.z + v1.z * v2.x,
+        z: v1.x * v2.y - v1.y * v2.z
     }
 }
 
@@ -146,18 +146,6 @@ impl MulAssign for Vec3 {
         self.x *= rhs.x;
         self.y *= rhs.y;
         self.z *= rhs.z;
-    }
-}
-
-impl Div for Vec3 {
-    type Output = Vec3;
-
-    fn div(self, rhs: Vec3) -> Vec3{
-        Vec3 {
-            x: self.x / rhs.x,
-            y: self.y / rhs.y,
-            z: self.z / rhs.y
-        }
     }
 }
 
@@ -354,5 +342,21 @@ mod test {
                 z: 0.0
             }
         );
+    }
+
+    #[test]
+    fn scale_mul() {
+        assert_eq!(
+            3.0 * Vec3::new(1.0, 2.0, 3.0),
+            Vec3::new(3.0, 6.0, 9.0)
+        )
+    }
+
+    #[test]
+    fn scale_div() {
+        assert_eq!(
+            Vec3::new(2.0, 4.0, 8.0) / 2.0,
+            Vec3::new(1.0, 2.0, 4.0)
+        )
     }
 }
