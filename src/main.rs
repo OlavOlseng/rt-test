@@ -2,6 +2,10 @@ extern crate minifb;
 
 use minifb::{Key, WindowOptions, Window};
 
+mod vec3;
+
+use vec3::Vec3;
+
 const WIDTH: usize = 640;
 const HEIGHT: usize = 360;
 
@@ -23,7 +27,14 @@ fn main() {
         
        window.update_with_buffer(&screen_buffer).unwrap();
     }
-  println!("Hello, world!");
+
+    let a = Vec3::new(1.0, 2.0, 3.0);
+    let b = Vec3::new(3.0, 5.0, 7.0);
+
+    let c = a + b;
+
+    println!("Vec sum: {:?}", c)
+
 }
 
 fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
