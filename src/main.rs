@@ -7,7 +7,9 @@ use crate::vec3::*;
 
 mod ray;
 use ray::Ray;
-use crate::ray::Hitable;
+
+mod hit;
+use crate::hit::*;
 
 mod sphere;
 use crate::sphere::*;
@@ -18,6 +20,11 @@ const HEIGHT: usize = 320;
 fn main() {
 
     let mut screen_buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
+    let mut spheres: Vec<Sphere> = Vec::new(); 
+    spheres.push(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5));
+    spheres.push(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0));
+    
+    let world = World{ world: spheres };
     
     let mut window = Window::new(
         "Raytracing test", 
@@ -28,14 +35,13 @@ fn main() {
         });
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        screen_buffer = render(screen_buffer, WIDTH as u32, HEIGHT as u32);
+        screen_buffer = render(screen_buffer, WIDTH as u32, HEIGHT as u32, &world);
         window.update_with_buffer(&screen_buffer).unwrap();
     };
 }
 
-fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
+fn render(mut buffer: Vec<u32>, width: u32, height: u32, world: &World) -> Vec<u32>{
     let mut pixel = 0;
-    let sphere: Sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
     let buffer_size = buffer.len();
 
     //Camera/Viewport description?
@@ -54,13 +60,13 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
 
             let ray = Ray::new(origin, direction);
 
-            let t = sphere.is_hit_by(&ray);
 
-            let color :u32 = if t > 0.0 {
-                shade_sphere(ray, t, &sphere)
-            } else {
+            let color = if let Some(hit) = world.trace(&ray, 0.0, std::f32::MAX) {
+                shade_sphere(&hit)
+            }
+            else {
                 to_argb_from_vec3(ray_to_color_vec(ray))
-            };
+            };                
            
             buffer[buffer_size - pixel - 1] = color;
             pixel += 1;
@@ -69,9 +75,8 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
     buffer
 }
 
-fn shade_sphere(ray: Ray, t: f32, sphere: &Sphere) -> u32 {
-    let normal = ray.point_at_time_t(t).make_unit_vector() - sphere.center;
-    to_argb_from_vec3(0.5 * (normal + Vec3::new(1.0, 1.0, 1.0)))
+fn shade_sphere(hit: &Hit) -> u32 {
+    to_argb_from_vec3(0.5 * (hit.normal + Vec3::new(1.0, 1.0, 1.0)))
 }
 
 fn ray_to_color_vec(ray: Ray) -> Vec3 {
@@ -90,4 +95,23 @@ fn to_argb_from_vec3(vector: Vec3) -> u32 {
     let g: u32 = (vector.y * 255.0) as u32;
     let b: u32 = (vector.z * 255.0) as u32;
     to_argb(r, g, b, 255)
+}
+
+pub struct World{ world: Vec<Sphere>}
+
+impl World {
+    pub fn trace(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit> {
+        let mut closest = t_max;
+        let mut first_hit: Option<Hit> = None;
+
+        for obj in self.world.iter() {
+           if let Some(hit) = obj.is_hit_by(t_min, t_max, &ray) {
+                if hit.t < closest {
+                    closest = hit.t;
+                    first_hit = Some(hit);
+                }
+           }
+        }
+        first_hit
+    }
 }

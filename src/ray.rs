@@ -14,11 +14,7 @@ impl Ray {
             }
     }
 
-    pub fn point_at_time_t(self, t: f32) -> Vec3 {
+    pub fn point_at_time_t(&self, t: f32) -> Vec3 {
         self.origin + t * self.direction
     }
-}
-
-pub trait Hitable {
-    fn is_hit_by(&self, ray: &Ray) -> f32;
 }
