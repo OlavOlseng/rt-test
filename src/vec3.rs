@@ -50,11 +50,11 @@ impl Vec3 {
     }
 }
 
-fn dot(v1: &Vec3, v2: &Vec3) -> f32 {
+pub fn dot(v1: &Vec3, v2: &Vec3) -> f32 {
     (v1 * v2).sum()
 }
 
-fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
+pub fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
     Vec3 {
         x: v1.y * v2.z - v1.z * v2.y,
         y: -v1.x * v2.z + v1.z * v2.x,

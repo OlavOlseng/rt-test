@@ -7,6 +7,10 @@ use crate::vec3::*;
 
 mod ray;
 use ray::Ray;
+use crate::ray::Hitable;
+
+mod sphere;
+use crate::sphere::*;
 
 const WIDTH: usize = 640;
 const HEIGHT: usize = 320;
@@ -31,7 +35,7 @@ fn main() {
 
 fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
     let mut pixel = 0;
-    
+    let sphere: Sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
     let buffer_size = buffer.len();
 
     //Camera/Viewport description?
@@ -50,7 +54,13 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
 
             let ray = Ray::new(origin, direction);
 
-            buffer[buffer_size - pixel - 1] = to_argb_from_vec3(ray_to_color_vec(ray));
+            let color :u32 = if sphere.is_hit_by(&ray) {
+                to_argb(255, 0, 0, 255)
+            } else {
+                 to_argb_from_vec3(ray_to_color_vec(ray))
+            };
+           
+            buffer[buffer_size - pixel - 1] = color;
             pixel += 1;
         }
     }

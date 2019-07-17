@@ -18,3 +18,7 @@ impl Ray {
         self.origin + t * self.direction
     }
 }
+
+pub trait Hitable {
+    fn is_hit_by(&self, ray: &Ray) -> bool;
+}
