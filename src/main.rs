@@ -54,10 +54,12 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
 
             let ray = Ray::new(origin, direction);
 
-            let color :u32 = if sphere.is_hit_by(&ray) {
-                to_argb(255, 0, 0, 255)
+            let t = sphere.is_hit_by(&ray);
+
+            let color :u32 = if t > 0.0 {
+                shade_sphere(ray, t, &sphere)
             } else {
-                 to_argb_from_vec3(ray_to_color_vec(ray))
+                to_argb_from_vec3(ray_to_color_vec(ray))
             };
            
             buffer[buffer_size - pixel - 1] = color;
@@ -67,12 +69,16 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32) -> Vec<u32>{
     buffer
 }
 
+fn shade_sphere(ray: Ray, t: f32, sphere: &Sphere) -> u32 {
+    let normal = ray.point_at_time_t(t).make_unit_vector() - sphere.center;
+    to_argb_from_vec3(0.5 * (normal + Vec3::new(1.0, 1.0, 1.0)))
+}
+
 fn ray_to_color_vec(ray: Ray) -> Vec3 {
-    // ray.direction.make_unit_vector()
     let unit_direction = ray.point_at_time_t(1.0).make_unit_vector();
-    // let t = 0.9 * (unit_direction.y + 1.0);
-    // (1.0 - t) * Vec3::ones() + t * Vec3::new(0.5, 0.7, 1.0)
     unit_direction
+    // let t = 0.9 * (ray.direction.make_unit_vector().y + 1.0);
+    // (1.0 - t) * Vec3::ones() + t * Vec3::new(0.5, 0.7, 1.0)
 }
 
 fn to_argb(r: u32, g: u32, b: u32, a: u32) -> u32 {

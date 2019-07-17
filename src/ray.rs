@@ -20,5 +20,5 @@ impl Ray {
 }
 
 pub trait Hitable {
-    fn is_hit_by(&self, ray: &Ray) -> bool;
+    fn is_hit_by(&self, ray: &Ray) -> f32;
 }
