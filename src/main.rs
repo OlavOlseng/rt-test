@@ -20,6 +20,8 @@ mod camera;
 const WIDTH: usize = 1920;
 const HEIGHT: usize = 1080;
 
+const RAY_SAMPLES: u32 = 200;
+
 fn main() {
 
     let mut screen_buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
@@ -59,48 +61,32 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32, world: &World) -> Vec<u
             Vec3::new(0.0, 2.0, 0.0)
         );
 
-    
-    let origin: Vec3 = Vec3::origin();
-    let lower_left: Vec3 = Vec3::new(-2.0, -1.0, -1.0);
-    let horizontal: Vec3 = Vec3::new(4.0, 0.0, 0.0);
-    let vertical: Vec3 = Vec3::new(0.0, 2.0, 0.0);
-    
+    let start = std::time::Instant::now();
+
     for y in 0..height {
         for x in 0..width {
             // let u = x as f32 / width as f32;
             // let v = 1.0 - y as f32 / height as f32;
 
-            let u = (x as f32 + rng.gen::<f32>()) / width as f32;
-            let v = 1.0 - (y as f32 + rng.gen::<f32>()) / height as f32;
-
-            let direction = lower_left + u * horizontal + v * vertical;
-
             // let ray = Ray::new(origin, direction);
-            let ray = cam.get_ray(u, v);
+            let mut color = Vec3::origin();
 
-            let color = if let Some(hit) = world.trace(&ray, 0.0, std::f32::MAX) {
-                shade_sphere(&hit)
+            for _i in 0..RAY_SAMPLES {
+                let u = (x as f32 + rng.gen::<f32>()) / width as f32;
+                let v = 1.0 - (y as f32 + rng.gen::<f32>()) / height as f32;
+
+                let ray = cam.get_ray(u, v);
+
+                color += world.trace(&ray, 0.0001, std::f32::MAX, &mut rng);
             }
-            else {
-                to_argb_from_vec3(ray_to_color_vec(ray))
-            };                
-           
-            buffer[pixel] = color;
+            color = color / RAY_SAMPLES as f32;
+            // println!("Rasterized pixel : {} {:?}", pixel, color);
+            buffer[pixel] = to_argb_from_vec3(color);
             pixel += 1;
         }
     }
+    println!("Frame render time: {}", start.elapsed().as_secs());
     buffer
-}
-
-fn shade_sphere(hit: &Hit) -> u32 {
-    to_argb_from_vec3(0.5 * (hit.normal + Vec3::new(1.0, 1.0, 1.0)))
-}
-
-fn ray_to_color_vec(ray: Ray) -> Vec3 {
-    // let unit_direction = ray.point_at_time_t(1.0).make_unit_vector();
-    // unit_direction
-    let t = 0.9 * (ray.direction.make_unit_vector().y + 1.0);
-    (1.0 - t) * Vec3::ones() + t * Vec3::new(0.5, 0.7, 1.0)
 }
 
 fn to_argb(r: u32, g: u32, b: u32, a: u32) -> u32 {
@@ -117,7 +103,7 @@ fn to_argb_from_vec3(vector: Vec3) -> u32 {
 pub struct World{ world: Vec<Sphere>}
 
 impl World {
-    pub fn trace(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Hit> {
+    pub fn trace(&self, ray: &Ray, t_min: f32, t_max: f32, rng: &mut ThreadRng) -> Vec3 {
         let mut closest = t_max;
         let mut first_hit: Option<Hit> = None;
 
@@ -129,6 +115,32 @@ impl World {
                 }
            }
         }
-        first_hit
+        if first_hit.is_some() {
+            let reflection = World::get_diffuse_reflection(&first_hit.unwrap(), rng);
+            return 0.5 * self.trace(&reflection, t_min, t_max, rng);
+        } else {
+            World::ray_to_ambient_color_vec(ray)
+        }
+    }
+
+    pub fn get_diffuse_reflection(hit: &Hit, rng: &mut ThreadRng) -> Ray {
+        let target = hit.point + hit.normal + World::random_in_unit_sphere(rng);
+        Ray::new(hit.point, (target - hit.point).make_unit_vector())
+    }
+
+    fn ray_to_ambient_color_vec(ray: &Ray) -> Vec3 {
+        // let unit_direction = ray.point_at_time_t(1.0).make_unit_vector();
+        // unit_direction
+        let t = 0.5 * (ray.direction.make_unit_vector().y + 1.0);
+        (1.0 - t) * Vec3::ones() + t * Vec3::new(0.5, 0.7, 1.0)
+    }
+
+    fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
+        loop {
+            let point = 2.0 * Vec3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>()) - Vec3::ones();
+            if point.squared_length() >= 1.0 {
+                break point
+            }
+        }
     }
 }
