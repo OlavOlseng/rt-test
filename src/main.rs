@@ -1,6 +1,7 @@
 extern crate minifb;
-
 use minifb::{Key, WindowOptions, Window};
+
+use rand::prelude::*;
 
 mod vec3;
 use crate::vec3::*;
@@ -14,8 +15,10 @@ use crate::hit::*;
 mod sphere;
 use crate::sphere::*;
 
-const WIDTH: usize = 640;
-const HEIGHT: usize = 320;
+mod camera;
+
+const WIDTH: usize = 1920;
+const HEIGHT: usize = 1080;
 
 fn main() {
 
@@ -27,25 +30,36 @@ fn main() {
     let world = World{ world: spheres };
     
     let mut window = Window::new(
-        "Raytracing test", 
+        "Raytracing test - esc to exit", 
         WIDTH, 
         HEIGHT, 
         WindowOptions::default()).unwrap_or_else(|e| {
             panic!("{}", e)
         });
 
+    screen_buffer = render(screen_buffer, WIDTH as u32, HEIGHT as u32, &world);
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        screen_buffer = render(screen_buffer, WIDTH as u32, HEIGHT as u32, &world);
         window.update_with_buffer(&screen_buffer).unwrap();
     };
 }
 
 fn render(mut buffer: Vec<u32>, width: u32, height: u32, world: &World) -> Vec<u32>{
     let mut pixel = 0;
-    let buffer_size = buffer.len();
-
     //Camera/Viewport description?
     // let origin: Vec3 = Vec3::origin();
+    
+    // let rng = rand::thread_rng();
+    let mut rng = thread_rng();
+    
+    let cam = camera::Camera::new(
+            Vec3::origin(),
+            Vec3::new(-2.0, -1.0, -1.0),
+            Vec3::new(4.0, 0.0, 0.0),
+            Vec3::new(0.0, 2.0, 0.0)
+        );
+
+    
     let origin: Vec3 = Vec3::origin();
     let lower_left: Vec3 = Vec3::new(-2.0, -1.0, -1.0);
     let horizontal: Vec3 = Vec3::new(4.0, 0.0, 0.0);
@@ -53,13 +67,16 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32, world: &World) -> Vec<u
     
     for y in 0..height {
         for x in 0..width {
-            let u = x as f32 / width as f32;
-            let v = y as f32 / height as f32;
+            // let u = x as f32 / width as f32;
+            // let v = 1.0 - y as f32 / height as f32;
+
+            let u = (x as f32 + rng.gen::<f32>()) / width as f32;
+            let v = 1.0 - (y as f32 + rng.gen::<f32>()) / height as f32;
 
             let direction = lower_left + u * horizontal + v * vertical;
 
-            let ray = Ray::new(origin, direction);
-
+            // let ray = Ray::new(origin, direction);
+            let ray = cam.get_ray(u, v);
 
             let color = if let Some(hit) = world.trace(&ray, 0.0, std::f32::MAX) {
                 shade_sphere(&hit)
@@ -68,7 +85,7 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32, world: &World) -> Vec<u
                 to_argb_from_vec3(ray_to_color_vec(ray))
             };                
            
-            buffer[buffer_size - pixel - 1] = color;
+            buffer[pixel] = color;
             pixel += 1;
         }
     }
@@ -80,10 +97,10 @@ fn shade_sphere(hit: &Hit) -> u32 {
 }
 
 fn ray_to_color_vec(ray: Ray) -> Vec3 {
-    let unit_direction = ray.point_at_time_t(1.0).make_unit_vector();
-    unit_direction
-    // let t = 0.9 * (ray.direction.make_unit_vector().y + 1.0);
-    // (1.0 - t) * Vec3::ones() + t * Vec3::new(0.5, 0.7, 1.0)
+    // let unit_direction = ray.point_at_time_t(1.0).make_unit_vector();
+    // unit_direction
+    let t = 0.9 * (ray.direction.make_unit_vector().y + 1.0);
+    (1.0 - t) * Vec3::ones() + t * Vec3::new(0.5, 0.7, 1.0)
 }
 
 fn to_argb(r: u32, g: u32, b: u32, a: u32) -> u32 {
