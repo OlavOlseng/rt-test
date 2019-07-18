@@ -2,6 +2,7 @@ extern crate minifb;
 use minifb::{Key, WindowOptions, Window};
 
 use rand::prelude::*;
+use rayon::prelude::*;
 
 mod vec3;
 use crate::vec3::*;
@@ -20,7 +21,7 @@ mod camera;
 const WIDTH: usize = 1920;
 const HEIGHT: usize = 1080;
 
-const RAY_SAMPLES: u32 = 200;
+const RAY_SAMPLES: u32 = 50;
 
 fn main() {
 
@@ -47,12 +48,10 @@ fn main() {
 }
 
 fn render(mut buffer: Vec<u32>, width: u32, height: u32, world: &World) -> Vec<u32>{
-    let mut pixel = 0;
     //Camera/Viewport description?
     // let origin: Vec3 = Vec3::origin();
     
     // let rng = rand::thread_rng();
-    let mut rng = thread_rng();
     
     let cam = camera::Camera::new(
             Vec3::origin(),
@@ -63,29 +62,30 @@ fn render(mut buffer: Vec<u32>, width: u32, height: u32, world: &World) -> Vec<u
 
     let start = std::time::Instant::now();
 
-    for y in 0..height {
-        for x in 0..width {
-            // let u = x as f32 / width as f32;
-            // let v = 1.0 - y as f32 / height as f32;
+    buffer = (0..width * height)
+        .into_par_iter()
+        .map_init(
+            || thread_rng(),
+            |mut rng, screen_pos| {
+                let mut color = Vec3::origin();
+                let x = screen_pos % width;
+                let y = height - 1 - screen_pos / width;
 
-            // let ray = Ray::new(origin, direction);
-            let mut color = Vec3::origin();
+                for _i in 0..RAY_SAMPLES {
+                    let u = (x as f32 + rng.gen::<f32>()) / width as f32;
+                    let v = (y as f32 + rng.gen::<f32>()) / height as f32;
 
-            for _i in 0..RAY_SAMPLES {
-                let u = (x as f32 + rng.gen::<f32>()) / width as f32;
-                let v = 1.0 - (y as f32 + rng.gen::<f32>()) / height as f32;
+                    let ray = cam.get_ray(u, v);
 
-                let ray = cam.get_ray(u, v);
-
-                color += world.trace(&ray, 0.0001, std::f32::MAX, &mut rng);
+                    color += world.trace(&ray, 0.0001, std::f32::MAX, &mut rng);
+                }
+                color = color / RAY_SAMPLES as f32;
+                // println!("Rasterized pixel : {} {:?}", color);
+                to_argb_from_vec3(color)
             }
-            color = color / RAY_SAMPLES as f32;
-            // println!("Rasterized pixel : {} {:?}", pixel, color);
-            buffer[pixel] = to_argb_from_vec3(color);
-            pixel += 1;
-        }
-    }
-    println!("Frame render time: {}", start.elapsed().as_secs());
+        ).collect();
+
+    println!("Frame render time: {}", start.elapsed().as_millis());
     buffer
 }
 
@@ -117,7 +117,7 @@ impl World {
         }
         if first_hit.is_some() {
             let reflection = World::get_diffuse_reflection(&first_hit.unwrap(), rng);
-            return 0.5 * self.trace(&reflection, t_min, t_max, rng);
+            return 0.67 * self.trace(&reflection, t_min, t_max, rng);
         } else {
             World::ray_to_ambient_color_vec(ray)
         }
